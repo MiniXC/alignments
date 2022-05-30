@@ -31,6 +31,7 @@ def cli():
 @click.option("--verbose", is_flag=True)
 @click.option("--transcript-pattern", default="{parent}/{name}.normalized.txt")
 @click.option("--speaker-pattern", default=".*[^\d](\d+)_\d+_\d+_\d+.wav")
+@click.option("--acoustic-model", default="english_us_arpa")
 @click.option(
     "--lexicon",
     default="https://www.openslr.org/resources/11/librispeech-lexicon.txt",
@@ -44,6 +45,7 @@ def create(
     transcript_pattern,
     speaker_pattern,
     lexicon,
+    acoustic_model,
     verbose,
 ):
     """
@@ -103,8 +105,8 @@ def create(
     run_subprocess(
         f". $CONDA_PREFIX/etc/profile.d/conda.sh \
             && conda activate mfa \
-            && mfa validate {target_directory} {lexicon_path} english -j {multiprocessing.cpu_count()} \
-            && mfa align {target_directory} {lexicon_path} english {target_temp_directory} -j {multiprocessing.cpu_count()} --clean",
+            && mfa validate {target_directory} {lexicon_path} {acoustic_model} -j {multiprocessing.cpu_count()} \
+            && mfa align {target_directory} {lexicon_path} {acoustic_model} {target_temp_directory} -j {multiprocessing.cpu_count()} --clean",
         "running montreal forced aligner",
         not verbose,
     )
