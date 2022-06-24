@@ -1,6 +1,6 @@
 [project]
 name = "alignments"
-version = "0.0.1"
+version = "0.0.2"
 description = ""
 authors = [
     {name = "Christoph Minixhofer", email = "christoph.minixhofer@gmail.com"},
@@ -8,15 +8,16 @@ authors = [
 dependencies = [
     "click>=8.0.4",
     "rich>=10.11.0",
+    "torch>=1.4.0",
+    "numpy>=1.19.5",
+    "tqdm>=4.64.0",
+    "textgrid>=1.5",
 ]
 requires-python = ">=3.6"
 license = {text = "MIT"}
 
 [project.urls]
-homepage = ""
-
-[project.scripts]
-alignments = "alignments:cli"
+homepage = "https://github.com/MiniXC/alignments"
 
 [tool]
 [tool.pdm]

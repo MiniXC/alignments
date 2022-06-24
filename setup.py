@@ -6,12 +6,11 @@ long_description = None
 INSTALL_REQUIRES = [
     'click>=8.0.4',
     'rich>=10.11.0',
+    'torch>=1.4.0',
+    'numpy>=1.19.5',
+    'tqdm>=4.64.0',
+    'textgrid>=1.5',
 ]
-ENTRY_POINTS = {
-    'console_scripts': [
-        'alignments = alignments:cli',
-    ],
-}
 
 setup_kwargs = {
     'name': 'alignments',
@@ -24,14 +23,10 @@ setup_kwargs = {
     'maintainer': None,
     'maintainer_email': None,
     'url': '',
-    'packages': [
-        'alignments',
-    ],
     'package_dir': {'': 'src'},
     'package_data': {'': ['*']},
     'install_requires': INSTALL_REQUIRES,
     'python_requires': '>=3.6',
-    'entry_points': ENTRY_POINTS,
 
 }
 
