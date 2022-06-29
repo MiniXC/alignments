@@ -2,7 +2,7 @@ from glob import glob
 from pathlib import Path
 import re
 
-from dataset import AlignmentDataset
+from alignments.dataset import AlignmentDataset
 
 class LibrittsDataset(AlignmentDataset):
     def __init__(

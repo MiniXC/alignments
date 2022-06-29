@@ -14,7 +14,7 @@ INSTALL_REQUIRES = [
 
 setup_kwargs = {
     'name': 'alignments',
-    'version': '0.0.1',
+    'version': '0.0.3',
     'description': '',
     'long_description': long_description,
     'license': 'MIT',
@@ -22,8 +22,10 @@ setup_kwargs = {
     'author_email': 'Christoph Minixhofer <christoph.minixhofer@gmail.com>',
     'maintainer': None,
     'maintainer_email': None,
-    'url': '',
-    'package_dir': {'': 'src'},
+    'url': 'https://github.com/MiniXC/alignments',
+    'packages': [
+        'alignments',
+    ],
     'package_data': {'': ['*']},
     'install_requires': INSTALL_REQUIRES,
     'python_requires': '>=3.6',

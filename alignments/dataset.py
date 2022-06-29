@@ -11,6 +11,7 @@ import subprocess
 import platform
 import multiprocessing
 import unicodedata
+import warnings
 
 from torch.utils.data import Dataset
 from tqdm.rich import tqdm
@@ -20,6 +21,7 @@ from rich.console import Console
 import textgrid
 
 console = Console()
+warnings.filterwarnings("ignore", message="rich is experimental/alpha")
 
 class DownloadProgressBar():
     def __init__(self):
