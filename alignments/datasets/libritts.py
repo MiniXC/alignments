@@ -5,30 +5,14 @@ import re
 from alignments.dataset import AlignmentDataset
 
 class LibrittsDataset(AlignmentDataset):
-    def __init__(
-        self,
-        target_directory,
-        source_directory,
-        source_url=None,
-        force="none",
-        symbolic_links=True,
-        verbose=False,
-        show_warnings=False,
-        punctuation_marks="!?.,;",
-    ):
-        super().__init__(
-            target_directory,
-            source_directory,
-            source_url,
-            force,
-            symbolic_links,
-            acoustic_model="english_us_arpa",
-            g2p_model="english_us_arpa",
-            lexicon="http://www.openslr.org/resources/11/librispeech-lexicon.txt",
-            verbose=verbose,
-            show_warnings=show_warnings,
-            punctuation_marks=punctuation_marks,
-        )
+    def __init__(self, **kwargs):
+        if "acoustic_model" not in kwargs:
+            kwargs["acoustic_model"] = "english_us_arpa"
+        if "g2p_model" not in kwargs:
+            kwargs["g2p_model"] = "english_us_arpa"
+        if "lexicon" not in kwargs:
+            kwargs["lexicon"] = "http://www.openslr.org/resources/11/librispeech-lexicon.txt"
+        super().__init__(**kwargs)
 
     def collect_data(self, directory):
         for file in Path(directory).glob("**/*.wav"):
