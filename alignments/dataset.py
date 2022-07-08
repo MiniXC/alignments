@@ -90,6 +90,7 @@ class AlignmentDataset(Dataset):
         verbose=False,
         show_warnings=False,
         punctuation_marks="!?.,;",
+        tmp_directory=None,
     ):
         super().__init__()
         __metaclass__ = abc.ABCMeta
@@ -98,6 +99,11 @@ class AlignmentDataset(Dataset):
         self.source_url = source_url
         self.show_warnings = show_warnings
         self.punctuation_marks = punctuation_marks
+        if tmp_directory is None:
+            self.tmp_directory = Path("/tmp/alignments")
+        else:
+            self.tmp_directory = Path(tmp_directory)
+        self.tmp_directory.mkdir(parents=True, exist_ok=True)
 
         if source_directory is None:
             # skip all other init steps
@@ -114,7 +120,7 @@ class AlignmentDataset(Dataset):
             if force == "download" or force == "all":
                 shutil.rmtree(source_directory)
             if not Path(source_directory).exists():
-                download_path = Path("/tmp/alignments/downloads")
+                download_path = Path(f"{self.tmp_directory}/downloads")
                 download_path.mkdir(exist_ok=True, parents=True)
                 if self.source_url.endswith(".zip"):
                     tmp_path = download_path / "data.zip"
@@ -195,7 +201,7 @@ class AlignmentDataset(Dataset):
                 "validating data",
                 not verbose
             )
-            lexicon_tmp_path = Path("/tmp/alignments") / "lexicon.txt"
+            lexicon_tmp_path = self.tmp_directory / "lexicon.txt"
             g2p_command = f". $CONDA_PREFIX/etc/profile.d/conda.sh \
                                 && conda activate alignments_mfa \
                                 && mfa g2p {g2p_model} {oov_path} {lexicon_tmp_path} -j {multiprocessing.cpu_count()}"
@@ -214,7 +220,7 @@ class AlignmentDataset(Dataset):
             for textgrid in Path(target_directory).glob("**/*.TextGrid"):
                 textgrid.unlink(missing_ok=True)
         if len(list(Path(target_directory).glob("**/*.TextGrid"))) == 0:
-            target_temp_directory = Path("/tmp/alignments/alignments")
+            target_temp_directory = self.tmp_directory / "alignments"
             shutil.rmtree(target_temp_directory, ignore_errors=True)
             target_temp_directory.mkdir(exist_ok=True, parents=True)
             align_command = f". $CONDA_PREFIX/etc/profile.d/conda.sh \
