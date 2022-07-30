@@ -1,6 +1,6 @@
 [project]
 name = "alignments"
-version = "0.0.5"
+version = "0.0.7"
 description = ""
 authors = [
     {name = "Christoph Minixhofer", email = "christoph.minixhofer@gmail.com"},
@@ -25,3 +25,7 @@ homepage = "https://github.com/MiniXC/alignments"
 [build-system]
 requires = ["pdm-pep517"]
 build-backend = "pdm.pep517.api"
+
+[[tool.pdm.autoexport]]
+filename = "setup.py"
+format = "setuppy"

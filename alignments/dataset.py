@@ -1,6 +1,6 @@
 from abc import abstractmethod
 import abc
-import imp
+import re
 from pathlib import Path
 from string import punctuation
 from urllib import request
@@ -91,6 +91,7 @@ class AlignmentDataset(Dataset):
         show_warnings=False,
         punctuation_marks="!?.,;",
         tmp_directory=None,
+        chunk_size=100,
     ):
         super().__init__()
         __metaclass__ = abc.ABCMeta
@@ -99,6 +100,7 @@ class AlignmentDataset(Dataset):
         self.source_url = source_url
         self.show_warnings = show_warnings
         self.punctuation_marks = punctuation_marks
+        self.chunk_size = chunk_size
         if tmp_directory is None:
             self.tmp_directory = Path("/tmp/alignments")
         else:
@@ -185,6 +187,12 @@ class AlignmentDataset(Dataset):
                 )
         else:
             print("Lexicon already exists. Skipping [blue]lexicon[/blue] creation.")
+        with open (lexicon_path, 'r') as f:
+            content = f.read()
+            content_new = re.sub('^(\S+)\s+', r'\1\t', content, flags = re.M)
+        with open (lexicon_path, 'w') as f:
+            f.write(content_new)
+        
 
         # VALIDATE
         lexicon_with_oov_path = Path(source_directory) / "lexicon_with_oov.txt"
@@ -213,7 +221,11 @@ class AlignmentDataset(Dataset):
             lexicon_with_oov_path.write_text(lexicon_path.read_text()+lexicon_tmp_path.read_text())
         else:
             print("Lexicon with OOV words and valid. directory already exists. Skipping [blue]validation[/blue].")
-        
+        with open (lexicon_with_oov_path, 'r') as f:
+            content = f.read()
+            content_new = re.sub('^(\S+)\s+', r'\1\t', content, flags = re.M)
+        with open (lexicon_with_oov_path, 'w') as f:
+            f.write(content_new)
 
         # ALIGN
         if force == "alignment" or force == "all":
@@ -259,7 +271,7 @@ class AlignmentDataset(Dataset):
         for item in process_map(
                 self._create_item,
                 self.files,
-                chunksize=100,
+                chunksize=self.chunk_size,
                 max_workers=multiprocessing.cpu_count(),
                 desc="collecting textgrid and audio files",
                 tqdm_class=tqdm,
