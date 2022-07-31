@@ -237,7 +237,7 @@ class AlignmentDataset(Dataset):
             target_temp_directory.mkdir(exist_ok=True, parents=True)
             align_command = f". $CONDA_PREFIX/etc/profile.d/conda.sh \
                                     && conda activate alignments_mfa \
-                                    && mfa align {target_directory} {lexicon_with_oov_path} {acoustic_model} {target_temp_directory} -j {multiprocessing.cpu_count()} --clean --overwrite"
+                                    && mfa align {target_directory} {lexicon_with_oov_path} {acoustic_model} {target_temp_directory} -j {multiprocessing.cpu_count()} --clean --overwrite --verbose"
             run_subprocess(
                     align_command,
                     "aligning data",
