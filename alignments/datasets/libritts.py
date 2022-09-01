@@ -21,6 +21,7 @@ class LibrittsDataset(AlignmentDataset):
                 transcript = transcript.replace("Illustration:", " ")
             transcript = re.sub("[\[\]\(\)-]", " ", transcript)
             transcript = re.sub("\s+", " ", transcript)
+            transcript = re.sub(r"'(\w)'", "\g<1>", transcript)
             yield {
                 "path": file,
                 "speaker": file.parent.parent.name,
