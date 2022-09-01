@@ -39,3 +39,12 @@ The ``"phones"`` list also inclodes ``[SILENCE]`` tokens between words, which ar
 - Symlinks audio files rather than copying them for alignment.
 - Adds OOV words to Lexicon.
 - Easily add your own dataset by extending ``AlignmentsDataset`` class and just implementing one method for collecting the transcripts.
+
+## Planned Features
+
+The following features are planned in future releases, please feel free to open issues if you have further ideas.
+
+- [ ] Visualise Alignments in a similar style to [Praat](https://www.fon.hum.uva.nl/praat/)
+- [ ] Integrate with [phones](github.com/MiniXC/phones) to allow automatic conversion to IPA phones
+
+
