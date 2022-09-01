@@ -10,6 +10,9 @@ libritts_100 = LibrittsDataset(
 )
 ```
 
+- ``source_directory`` specifies the directory where a) the data is already present or b) you want the data to be downloaded to
+- ``target_directory`` specifies the directory you want the aligned data to be stored at
+
 The dataset can then be used as follows:
 
 ```python
@@ -33,5 +36,6 @@ The ``"phones"`` list also inclodes ``[SILENCE]`` tokens between words, which ar
 
 - Automatically downloads data on first run.
 - Automatically downloads and installs Montreal Forced Aligner in its own conda environment.
+- Symlinks audio files rather than copying them for alignment.
 - Adds OOV words to Lexicon.
 - Easily add your own dataset by extending ``AlignmentsDataset`` class and just implementing one method for collecting the transcripts.
