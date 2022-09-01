@@ -28,3 +28,10 @@ The ``"phones"`` list also inclodes ``[SILENCE]`` tokens between words, which ar
  - [ ] LJSpeech
  - [ ] CommonVoice
  - [ ] GlobalPhone
+
+## Features
+
+- Automatically downloads data on first run.
+- Automatically downloads and installs Montreal Forced Aligner in its own conda environment.
+- Adds OOV words to Lexicon.
+- Easily add your own dataset by extending ``AlignmentsDataset`` class and just implementing one method for collecting the transcripts.
