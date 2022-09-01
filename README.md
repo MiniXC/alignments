@@ -21,3 +21,10 @@ for item in libritts_100:
 ```
 
 The ``"phones"`` list also inclodes ``[SILENCE]`` tokens between words, which are set to a length of 0 if no silence is present. In the case of punctuation, this silence token is replaced with the corresponding punctuation token.
+
+## Supported Datasets
+
+ - [x] LibriTTS
+ - [ ] LJSpeech
+ - [ ] CommonVoice
+ - [ ] GlobalPhone
