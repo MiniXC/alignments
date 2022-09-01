@@ -20,4 +20,4 @@ for item in libritts_100:
   item["phones"] # a list of triples (start_time_in_seconds, end_time_in_seconds, phone)
 ```
 
-The ``"phones"`` list also inclodes "[SILENCE]" tokens between words, which are set to a length of 0 if no silence is present. In the case of punctuation, this silence token is replaced with the corresponding punctuation token.
+The ``"phones"`` list also inclodes ``[SILENCE]`` tokens between words, which are set to a length of 0 if no silence is present. In the case of punctuation, this silence token is replaced with the corresponding punctuation token.
