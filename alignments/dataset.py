@@ -131,9 +131,10 @@ class AlignmentDataset(Dataset):
                 elif self.source_url.endswith(".tar.gz"):
                     tmp_path = download_path / "data.tar.gz"
                     response = request.urlretrieve(self.source_url, tmp_path, DownloadProgressBar())
-                    tarfile.open(tmp_path).extractall(source_directory)
+                    tarfile.open(tmp_path).extractall(source_directory, ignore_errors=True)
                 else:
                     raise ValueError("Unknown file type, only .zip and .tar.gz are supported.")
+                shutil.rmtree(download_path)
             else:
                 print("Source directory already exists. Skipping [blue]download[/blue].")
 
@@ -247,6 +248,8 @@ class AlignmentDataset(Dataset):
                 f"cp -rT {target_temp_directory} {target_directory}",
                 "copying TextGrids to target directory",
             )
+            shutil.rmtree(target_temp_directory, ignore_errors=True)
+            shutil.rmtree(os.environ["MFA_ROOT_DIR"], ignore_errors=True)
         else:
             print("TextGrids already exist. Skipping [blue]alignment[/blue].")
 
