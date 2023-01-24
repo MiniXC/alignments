@@ -131,10 +131,10 @@ class AlignmentDataset(Dataset):
                 elif self.source_url.endswith(".tar.gz"):
                     tmp_path = download_path / "data.tar.gz"
                     response = request.urlretrieve(self.source_url, tmp_path, DownloadProgressBar())
-                    tarfile.open(tmp_path).extractall(source_directory, ignore_errors=True)
+                    tarfile.open(tmp_path).extractall(source_directory)
                 else:
                     raise ValueError("Unknown file type, only .zip and .tar.gz are supported.")
-                shutil.rmtree(download_path)
+                shutil.rmtree(download_path, ignore_errors=True)
             else:
                 print("Source directory already exists. Skipping [blue]download[/blue].")
 
