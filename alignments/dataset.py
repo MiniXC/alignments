@@ -71,7 +71,7 @@ def check_install_mfa(verbose, force):
             f"conda create -y -n alignments_mfa python={platform.python_version()}", 'creating "alignments_mfa" conda environment', not verbose
         )
         out = run_subprocess(
-            "conda install montreal-forced-aligner -c conda-forge -n alignments_mfa -y",
+            "conda install montreal-forced-aligner=2.0.4 -c conda-forge -n alignments_mfa -y",
             "installing montreal-forced-aligner",
             not verbose,
         )
