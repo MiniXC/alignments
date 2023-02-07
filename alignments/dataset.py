@@ -75,6 +75,11 @@ def check_install_mfa(verbose, force):
             "installing montreal-forced-aligner",
             not verbose,
         )
+        out = run_subprocess(
+            ". $CONDA_PREFIX/etc/profile.d/conda.sh && conda activate alignments_mfa && pip install sqlalchemy==1.*",
+            "installing sqlalchemy",
+            not verbose,
+        )
 
 class AlignmentDataset(Dataset):
     def __init__(

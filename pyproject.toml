@@ -1,6 +1,6 @@
 [project]
 name = "alignments"
-version = "0.0.11"
+version = "0.0.12"
 description = ""
 authors = [
     {name = "Christoph Minixhofer", email = "christoph.minixhofer@gmail.com"},
