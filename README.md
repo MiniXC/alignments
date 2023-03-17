@@ -1,6 +1,4 @@
-![image](https://user-images.githubusercontent.com/3523501/225879662-4745f31a-6023-494d-a7a8-56d62d3a4aae.png)
-
-# alignments
+# <img src="https://user-images.githubusercontent.com/3523501/225879662-4745f31a-6023-494d-a7a8-56d62d3a4aae.png" width="300" alt="alignments"/>
 This tool is an abstraction of the [Montreal Forced Aligner](montreal-forced-aligner.readthedocs.io/) so it can be used as a PyTorch dataset.
 
 ```python
@@ -25,7 +23,8 @@ for item in libritts_100:
   item["phones"] # a list of triples (start_time_in_seconds, end_time_in_seconds, phone)
 ```
 
-The ``"phones"`` list also inclodes ``[SILENCE]`` tokens between words, which are set to a length of 0 if no silence is present. In the case of punctuation, this silence token is replaced with the corresponding punctuation token.
+The ``"phones"`` list also inclodes ``[SILENCE]`` tokens between words, which are set to a length of 0 if no silence is present. In the case of punctuation, this silence token is replaced with the corresponding punctuation token.![image](https://user-images.githubusercontent.com/3523501/225880623-a299edc2-c3a7-4940-bc97-cf10c85e1691.png)
+
 
 ## Supported Datasets
 
