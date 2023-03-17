@@ -1,4 +1,4 @@
-# alignments
+# <img src="https://user-images.githubusercontent.com/3523501/225879662-4745f31a-6023-494d-a7a8-56d62d3a4aae.png" width="300" alt="alignments"/>
 This tool is an abstraction of the [Montreal Forced Aligner](montreal-forced-aligner.readthedocs.io/) so it can be used as a PyTorch dataset.
 
 ```python
@@ -24,6 +24,7 @@ for item in libritts_100:
 ```
 
 The ``"phones"`` list also inclodes ``[SILENCE]`` tokens between words, which are set to a length of 0 if no silence is present. In the case of punctuation, this silence token is replaced with the corresponding punctuation token.
+
 
 ## Supported Datasets
 
