@@ -19,6 +19,8 @@ from tqdm.contrib.concurrent import process_map
 from rich import print
 from rich.console import Console
 import textgrid
+import soundfile as sf
+import librosa
 
 console = Console()
 warnings.filterwarnings("ignore", message="rich is experimental/alpha")
@@ -97,6 +99,7 @@ class AlignmentDataset(Dataset):
         punctuation_marks="!?.,;",
         tmp_directory=None,
         chunk_size=100,
+        target_sampling_rate=None,
     ):
         super().__init__()
         __metaclass__ = abc.ABCMeta
@@ -106,6 +109,7 @@ class AlignmentDataset(Dataset):
         self.show_warnings = show_warnings
         self.punctuation_marks = punctuation_marks
         self.chunk_size = chunk_size
+        self.target_sampling_rate = target_sampling_rate
         if tmp_directory is None:
             self.tmp_directory = Path("/tmp/alignments")
         else:
@@ -298,6 +302,15 @@ class AlignmentDataset(Dataset):
                     print(f"WARNING: \"{item['text']}\" is incorrect and was skipped because {item['incorrect']}")
                 none_count += 1
         print(f"Found {len(self.data)} items with {none_count} skipped due to bad punctuation.")
+        if self.target_sampling_rate is not None:
+            process_map(
+                self._resample_wav,
+                [x["path"] for x in self.data],
+                chunksize=self.chunk_size,
+                max_workers=multiprocessing.cpu_count(),
+                desc=f"resampling wavs to {self.target_sampling_rate}",
+                tqdm_class=tqdm,
+            )
 
     @abstractmethod
     def collect_data(self, directory):
@@ -308,6 +321,15 @@ class AlignmentDataset(Dataset):
         - "transcript": the transcript
         """
         raise NotImplementedError()
+
+    def _resample_wav(self, wav_file):
+        # TODO use librosa to load and soundfile to save in place with new sampling rate
+        wav, sampling_rate = librosa.load(wav_file, sr=self.target_sampling_rate)
+        # resample to self.target_sampling_rate
+        wav = librosa.resample(wav, sampling_rate, self.target_sampling_rate, res_type="kaiser_fast")
+        # save to wav_file
+        soundfile.write(wav_file, wav, self.target_sampling_rate)
+
 
     def _create_item(self, file):
         # TODO: fix quotes and triple dots
