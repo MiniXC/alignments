@@ -16,7 +16,7 @@ class LibrittsDataset(AlignmentDataset):
 
     def collect_data(self, directory):
         for file in Path(directory).glob("**/*.wav"):
-            if file.name.startswith("."):
+            if file.name.startswith(".") or not file.with_suffix(".normalized.txt").is_file():
                 continue
             transcript = open(file.with_suffix(".normalized.txt"), "r").read()
             if "illustration" in transcript.lower():
