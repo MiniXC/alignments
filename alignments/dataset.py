@@ -142,7 +142,6 @@ class AlignmentDataset(Dataset):
             else:
                 raise ValueError("Unknown file type, only .zip and .tar.gz are supported.")
             shutil.rmtree(download_path, ignore_errors=True)
-            self._load_files()
             return
 
         # DOWNLOAD
@@ -183,6 +182,11 @@ class AlignmentDataset(Dataset):
                 target_path.with_suffix(".lab").write_text(item["transcript"])
         else:
             print("Target directory already exists. Skipping [blue]processing[/blue].")
+
+        # We can avoid MFA if TextGrids already exist
+        if textgrid_url is not None:
+            self._load_files()
+            return
 
         # PREPARE
         check_install_mfa(True, force=="conda" or force=="all")

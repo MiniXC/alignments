@@ -1,6 +1,6 @@
 [project]
 name = "alignments"
-version = "0.1.1"
+version = "0.1.2"
 description = "A library for aligning audio and text"
 authors = [
     {name = "Christoph Minixhofer", email = "christoph.minixhofer@gmail.com"},
