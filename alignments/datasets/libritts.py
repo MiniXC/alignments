@@ -39,7 +39,7 @@ class LibrittsRDataset(AlignmentDataset):
             kwargs["g2p_model"] = "english_us_arpa"
         if "lexicon" not in kwargs:
             kwargs["lexicon"] = "http://www.openslr.org/resources/11/librispeech-lexicon.txt"
-        if "textgrid_url" not in kwargs and "source_url" in kwargs:
+        if "textgrid_url" not in kwargs and "source_url" in kwargs and kwargs["source_url"] is not None:
             hf_url = "https://huggingface.co/datasets/cdminix/libritts-r-aligned/resolve/main/data/"
             if "dev_clean" in kwargs["source_url"]:
                 kwargs["textgrid_url"] = hf_url + "dev_clean.tar.gz"
