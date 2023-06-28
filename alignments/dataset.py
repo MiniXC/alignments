@@ -100,6 +100,7 @@ class AlignmentDataset(Dataset):
         tmp_directory=None,
         chunk_size=100,
         target_sampling_rate=None,
+        textgrid_url=None, # url to a zip file containing TextGrids
     ):
         super().__init__()
         __metaclass__ = abc.ABCMeta
@@ -123,6 +124,28 @@ class AlignmentDataset(Dataset):
 
         if len(list(Path(target_directory).glob("**/*.TextGrid"))) > 0 and force == "none":
             print(f"[green]✓[/green] {target_directory} already contains TextGrids")
+            self._load_files()
+            return
+        
+        if textgrid_url is not None:
+            # download textgrids
+            download_path = Path(f"{self.tmp_directory}/downloads")
+            download_path.mkdir(exist_ok=True, parents=True)
+            if textgrid_url.endswith(".zip"):
+                tmp_path = download_path / "data.zip"
+                response = request.urlretrieve(textgrid_url, tmp_path, DownloadProgressBar())
+                if response[1].get_content_type() != "application/zip":
+                    raise ValueError("Unknown file type, only .zip and .tar.gz are supported.")
+                ZipFile(tmp_path).extractall(target_directory)
+            elif textgrid_url.endswith(".tar.gz"):
+                tmp_path = download_path / "data.tar.gz"
+                response = request.urlretrieve(textgrid_url, tmp_path, DownloadProgressBar())
+                if response[1].get_content_type() != "application/x-gzip":
+                    raise ValueError("Unknown file type, only .zip and .tar.gz are supported.")
+                tarfile.open(tmp_path).extractall(target_directory)
+            else:
+                raise ValueError("Unknown file type, only .zip and .tar.gz are supported.")
+            shutil.rmtree(download_path, ignore_errors=True)
             self._load_files()
             return
 

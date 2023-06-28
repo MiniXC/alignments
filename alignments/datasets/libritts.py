@@ -1,6 +1,7 @@
 from glob import glob
 from pathlib import Path
 import re
+from transformers.utils.hub import cached_file
 
 from alignments.dataset import AlignmentDataset
 
@@ -38,6 +39,22 @@ class LibrittsRDataset(AlignmentDataset):
             kwargs["g2p_model"] = "english_us_arpa"
         if "lexicon" not in kwargs:
             kwargs["lexicon"] = "http://www.openslr.org/resources/11/librispeech-lexicon.txt"
+        if "textgrid_url" not in kwargs:
+            hf_url = "https://huggingface.co/datasets/cdminix/libritts-r-aligned/resolve/main/data/"
+            if "dev_clean" in kwargs["source_url"]:
+                kwargs["textgrid_url"] = hf_url + "dev_clean.tar.gz"
+            elif "dev_other" in kwargs["source_url"]:
+                kwargs["textgrid_url"] = hf_url + "dev_other.tar.gz"
+            elif "test_clean" in kwargs["source_url"]:
+                kwargs["textgrid_url"] = hf_url + "test_clean.tar.gz"
+            elif "test_other" in kwargs["source_url"]:
+                kwargs["textgrid_url"] = hf_url + "test_other.tar.gz"
+            elif "train_clean_100" in kwargs["source_url"]:
+                kwargs["textgrid_url"] = hf_url + "train_clean_100.tar.gz"
+            elif "train_clean_360" in kwargs["source_url"]:
+                kwargs["textgrid_url"] = hf_url + "train_clean_360.tar.gz"
+            elif "train_other_500" in kwargs["source_url"]:
+                kwargs["textgrid_url"] = hf_url + "train_other_500.tar.gz"
         super().__init__(**kwargs)
 
     def collect_data(self, directory):
