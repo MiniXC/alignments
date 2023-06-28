@@ -14,7 +14,7 @@ INSTALL_REQUIRES = [
 
 setup_kwargs = {
     'name': 'alignments',
-    'version': '0.1.3',
+    'version': '0.1.4',
     'description': '',
     'long_description': long_description,
     'license': 'MIT',

@@ -141,6 +141,12 @@ class AlignmentDataset(Dataset):
                 tarfile.open(tmp_path).extractall(target_directory)
             else:
                 raise ValueError("Unknown file type, only .zip and .tar.gz are supported.")
+            # if speaker directories are missing, create them, and move .TextGrid files
+            for textgrid in Path(target_directory).glob("*.TextGrid"):
+                speaker = textgrid.name.split("_")[0]
+                speaker_dir = Path(target_directory) / speaker
+                speaker_dir.mkdir(exist_ok=True, parents=True)
+                shutil.move(textgrid, speaker_dir / textgrid.name)
             shutil.rmtree(download_path, ignore_errors=True)
 
         # DOWNLOAD
@@ -167,7 +173,7 @@ class AlignmentDataset(Dataset):
         # LOAD
         if force == "processing" or force == "all":
             shutil.rmtree(target_directory)
-        if not Path(target_directory).exists():
+        if not Path(target_directory).exists() or (textgrid_url is not None and len(list(Path(target_directory).glob("**/*.wav"))) == 0):
             Path(target_directory).mkdir(exist_ok=True, parents=True)
             for item in self.collect_data(self.source_directory):
                 if not item["path"].suffix == ".wav":
