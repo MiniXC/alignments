@@ -142,7 +142,6 @@ class AlignmentDataset(Dataset):
             else:
                 raise ValueError("Unknown file type, only .zip and .tar.gz are supported.")
             shutil.rmtree(download_path, ignore_errors=True)
-            return
 
         # DOWNLOAD
         if self.source_url is not None:
