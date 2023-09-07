@@ -15,19 +15,19 @@ class LibrittsDataset(AlignmentDataset):
             kwargs["lexicon"] = "http://www.openslr.org/resources/11/librispeech-lexicon.txt"
         if "textgrid_url" not in kwargs and "source_url" in kwargs and kwargs["source_url"] is not None:
             hf_url = "https://huggingface.co/datasets/cdminix/libritts-aligned/resolve/main/data/"
-            if "dev_clean" in kwargs["source_url"]:
+            if "dev-clean" in kwargs["source_url"]:
                 kwargs["textgrid_url"] = hf_url + "dev_clean.tar.gz"
-            elif "dev_other" in kwargs["source_url"]:
+            elif "dev-other" in kwargs["source_url"]:
                 kwargs["textgrid_url"] = hf_url + "dev_other.tar.gz"
-            elif "test_clean" in kwargs["source_url"]:
+            elif "test-clean" in kwargs["source_url"]:
                 kwargs["textgrid_url"] = hf_url + "test_clean.tar.gz"
-            elif "test_other" in kwargs["source_url"]:
+            elif "test-other" in kwargs["source_url"]:
                 kwargs["textgrid_url"] = hf_url + "test_other.tar.gz"
-            elif "train_clean_100" in kwargs["source_url"]:
+            elif "train-clean-100" in kwargs["source_url"]:
                 kwargs["textgrid_url"] = hf_url + "train_clean_100.tar.gz"
-            elif "train_clean_360" in kwargs["source_url"]:
+            elif "train-clean-360" in kwargs["source_url"]:
                 kwargs["textgrid_url"] = hf_url + "train_clean_360.tar.gz"
-            elif "train_other_500" in kwargs["source_url"]:
+            elif "train-other-500" in kwargs["source_url"]:
                 kwargs["textgrid_url"] = hf_url + "train_other_500.tar.gz"
         super().__init__(**kwargs)
 

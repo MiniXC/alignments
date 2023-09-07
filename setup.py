@@ -10,11 +10,13 @@ INSTALL_REQUIRES = [
     'numpy>=1.19.5',
     'tqdm>=4.64.0',
     'textgrid>=1.5',
+    "librosa>=0.9.2",
+    "soundfile>=0.12.1",
 ]
 
 setup_kwargs = {
     'name': 'alignments',
-    'version': '0.1.6',
+    'version': '0.1.7',
     'description': '',
     'long_description': long_description,
     'license': 'MIT',
