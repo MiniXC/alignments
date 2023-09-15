@@ -101,6 +101,7 @@ class AlignmentDataset(Dataset):
         chunk_size=100,
         target_sampling_rate=None,
         textgrid_url=None, # url to a zip file containing TextGrids
+        n_workers=multiprocessing.cpu_count(),
     ):
         super().__init__()
         __metaclass__ = abc.ABCMeta
@@ -217,7 +218,7 @@ class AlignmentDataset(Dataset):
             elif g2p_model is not None:
                 g2p_command = f". $CONDA_PREFIX/etc/profile.d/conda.sh \
                                 && conda activate alignments_mfa \
-                                && mfa g2p {g2p_model} {target_directory} {lexicon_path} -j {multiprocessing.cpu_count()}"
+                                && mfa g2p {g2p_model} {target_directory} {lexicon_path} -j {n_workers}"
                 run_subprocess(
                     g2p_command,
                     "creating lexicon using g2p model (this could take a while)",
@@ -241,7 +242,7 @@ class AlignmentDataset(Dataset):
         if not lexicon_with_oov_path.exists() or not oov_path.parent.exists():
             align_command = f". $CONDA_PREFIX/etc/profile.d/conda.sh \
                                 && conda activate alignments_mfa \
-                                && mfa validate {target_directory} {lexicon_path} {acoustic_model} -j {multiprocessing.cpu_count()} --clean --overwrite"
+                                && mfa validate {target_directory} {lexicon_path} {acoustic_model} -j {n_workers} --clean --overwrite"
             run_subprocess(
                 align_command,
                 "validating data",
@@ -250,7 +251,7 @@ class AlignmentDataset(Dataset):
             lexicon_tmp_path = self.tmp_directory / "lexicon.txt"
             g2p_command = f". $CONDA_PREFIX/etc/profile.d/conda.sh \
                                 && conda activate alignments_mfa \
-                                && mfa g2p {g2p_model} {oov_path} {lexicon_tmp_path} -j {multiprocessing.cpu_count()}"
+                                && mfa g2p {g2p_model} {oov_path} {lexicon_tmp_path} -j {n_workers}"
             run_subprocess(
                 g2p_command,
                 "using g2p model for oovs",
@@ -275,7 +276,7 @@ class AlignmentDataset(Dataset):
             target_temp_directory.mkdir(exist_ok=True, parents=True)
             align_command = f". $CONDA_PREFIX/etc/profile.d/conda.sh \
                                     && conda activate alignments_mfa \
-                                    && mfa align {target_directory} {lexicon_with_oov_path} {acoustic_model} {target_temp_directory} -j {multiprocessing.cpu_count()} --clean --overwrite --verbose"
+                                    && mfa align {target_directory} {lexicon_with_oov_path} {acoustic_model} {target_temp_directory} -j {n_workers} --clean --overwrite --verbose"
             run_subprocess(
                     align_command,
                     "aligning data",
@@ -312,7 +313,7 @@ class AlignmentDataset(Dataset):
                 self._create_item,
                 self.files,
                 chunksize=self.chunk_size,
-                max_workers=multiprocessing.cpu_count(),
+                max_workers=n_workers,
                 desc="collecting textgrid and audio files",
                 tqdm_class=tqdm,
             ):
@@ -335,7 +336,7 @@ class AlignmentDataset(Dataset):
                 self._resample_wav,
                 [x["path"] for x in self.data],
                 chunksize=self.chunk_size,
-                max_workers=multiprocessing.cpu_count(),
+                max_workers=n_workers,
                 desc=f"resampling wavs to {self.target_sampling_rate}",
                 tqdm_class=tqdm,
             )
