@@ -112,6 +112,7 @@ class AlignmentDataset(Dataset):
         self.punctuation_marks = punctuation_marks
         self.chunk_size = chunk_size
         self.target_sampling_rate = target_sampling_rate
+        self.n_workers = n_workers
         if tmp_directory is None:
             self.tmp_directory = Path("/tmp/alignments")
         else:
@@ -313,7 +314,7 @@ class AlignmentDataset(Dataset):
                 self._create_item,
                 self.files,
                 chunksize=self.chunk_size,
-                max_workers=n_workers,
+                max_workers=self.n_workers,
                 desc="collecting textgrid and audio files",
                 tqdm_class=tqdm,
             ):
@@ -336,7 +337,7 @@ class AlignmentDataset(Dataset):
                 self._resample_wav,
                 [x["path"] for x in self.data],
                 chunksize=self.chunk_size,
-                max_workers=n_workers,
+                max_workers=self.n_workers,
                 desc=f"resampling wavs to {self.target_sampling_rate}",
                 tqdm_class=tqdm,
             )
