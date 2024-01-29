@@ -10,6 +10,7 @@ INSTALL_REQUIRES = [
     'numpy>=1.19.5',
     'tqdm>=4.64.0',
     'textgrid>=1.5',
+    'tgt>=1.5',
     "librosa>=0.9.2",
     "soundfile>=0.12.1",
 ]
