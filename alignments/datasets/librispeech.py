@@ -8,6 +8,9 @@ import shutil
 from tqdm.auto import tqdm
 from transformers.utils.hub import cached_file
 import tgt
+import torchaudio
+import torch
+import librosa
 
 from alignments.dataset import AlignmentDataset
 
@@ -118,91 +121,74 @@ class LibriHeavyDataset(AlignmentDataset):
         if not Path(kwargs["source_directory"]).exists():
             Path(kwargs["source_directory"]).mkdir(parents=True)
             # construct the textgrid files from the jsonl
-            recording_set = set()
-            total_recording_duration = 0
             with gzip.open(jsonl_path, mode='rt', encoding="utf-8") as gz_file:
                 i = 0
-                skips = 0
                 seconds = 0
-                seconds_all = 0
+                skips = 0
+                source_dict = {}
                 previous_source = None
+                prev_int_hours = 0
                 for line in tqdm(gz_file):
                     i += 1
                     data = json.loads(line)
-                    if data["recording"]["id"] not in recording_set:
-                        recording_set.add(data["recording"]["id"])
-                        total_recording_duration += data["recording"]["duration"]
-                    current_source = data["recording"]["sources"][0]["source"]
+                    current_source = Path(jsonl_path).parent / Path(data["recording"]["sources"][0]["source"])
+                    if current_source not in source_dict:
+                        source_dict[current_source] = []
+                    source_dict[current_source].append([
+                        len(source_dict[current_source]) + 1,
+                        data["start"],
+                        data["duration"],
+                        data["supervisions"][0]["speaker"],
+                        data["supervisions"][0]["custom"]["texts"][0],
+                    ])
                     if len(data["supervisions"]) > 1:
                         raise ValueError("multiple supervisions not supported")
-                    speaker = data["supervisions"][0]["speaker"]
-                    if current_source != previous_source:
-                        if previous_source is not None:
-                            Path(tgt_path).parent.mkdir(parents=True, exist_ok=True)
-                            tgt.io.write_to_file(tgt_file, tgt_path)
-                            # symlink flac file
-                            if not Path(previous_source).exists():
-                                Path(tgt_path).resolve().with_suffix(".flac").symlink_to(Path(previous_source).resolve())
-                        tgt_path = (Path(kwargs["source_directory"]) / speaker / Path(current_source).name).with_suffix(".TextGrid")
-                        if tgt_path.exists():
-                            tgt_file = tgt.io.read_textgrid(tgt_path)
-                        else:
-                            tgt_file = tgt.core.TextGrid(tgt_path)
-                        if not tgt_file.has_tier(speaker):
-                            tgt_file.add_tier(
-                                tgt.core.IntervalTier(
-                                    float(data["start"]), 
-                                    float(data["start"]) + float(data["duration"]),
-                                    speaker
-                                )
-                            )
-                        previous_source = current_source
-                    speaker_tier = tgt_file.get_tier_by_name(speaker)
-                    try:
-                        speaker_tier.add_interval(
-                            tgt.core.Interval(
-                                float(data["start"]), 
-                                float(data["start"]) + float(data["duration"]),
-                                data["supervisions"][0]["custom"]["texts"][0]
-                            )
-                        )
-                        seconds_all += float(data["duration"])
-                        seconds += float(data["duration"])
-                    except ValueError as e:
-                        # replace the interval if the new one is shorter
-                        interval = speaker_tier.get_annotations_between_timepoints(
-                            float(data["start"]),
-                            float(data["start"]) + float(data["duration"]),
-                            left_overlap=True,
-                            right_overlap=True
-                        )[0]
-                        old_duration = interval.end_time - interval.start_time
-                        seconds_all -= old_duration
-                        old_start, old_end = interval.start_time, interval.end_time
-                        new_start, new_end = float(data["start"]), float(data["start"]) + float(data["duration"])
-                        seconds_all += max(new_end, old_end) - min(new_start, old_start)
-                        new_duration = float(data["duration"])
-                        if new_duration > old_duration:
-                            speaker_tier.delete_annotations_between_timepoints(
-                                float(data["start"]),
-                                float(data["start"]) + float(data["duration"]),
-                                left_overlap=True,
-                                right_overlap=True
-                            )
-                            speaker_tier.add_interval(
-                                tgt.core.Interval(
-                                    float(data["start"]), 
-                                    float(data["start"]) + float(data["duration"]),
-                                    data["supervisions"][0]["custom"]["texts"][0]
-                                )
-                            )
-                            seconds += float(data["duration"]) - old_duration
-                        skips += 1
-        print(f"skipped {round(skips / i * 100, 2)}% of the lines due to overlap")
-        print(f"added {round(seconds / 3600, 2)} hours of audio")
-        print(f"added {round(seconds_all / 3600, 2)} hours of audio in theory")
-        print(f"added {round(total_recording_duration / 3600, 2)} hours of audio in total")
+                    # tgt_path_lab = (Path(kwargs["source_directory"]) / speaker / (Path(current_source).name + f"_{source_dict[current_source][-1][0]}")).with_suffix(".lab")
+                    # tgt_path_flac = tgt_path_lab.with_suffix(".flac")
+                    # transcript = data["supervisions"][0]["custom"]["texts"][0]
+                    # start_time = float(data["start"])
+                    # end_time = float(data["start"]) + float(data["duration"])
+                    # # save transcript to lab file
+                    # tgt_path_lab.parent.mkdir(parents=True, exist_ok=True)
+                    # with open(tgt_path_lab, "w") as f:
+                    #     f.write(transcript)
+                    if current_source != previous_source and previous_source is not None:
+                        # save transcripts to lab files
+                        audio, sample_rate = torchaudio.load(current_source)
+                        for source in source_dict[previous_source]:
+                            new_audio = audio[:, int(source[1] * sample_rate):int((source[1] + source[2]) * sample_rate)]
+                            if new_audio.shape[1] > 0:
+                                tgt_path_lab = (Path(kwargs["source_directory"]) / source[3] / (Path(previous_source).name.replace(".flac", "") + f"_{source[0]}")).with_suffix(".lab")
+                                tgt_path_flac = tgt_path_lab.with_suffix(".flac")
+                                tgt_path_lab.parent.mkdir(parents=True, exist_ok=True)
+                                with open(tgt_path_lab, "w") as f:
+                                    f.write(source[4])
+                                # save audio to flac files
+                                if not tgt_path_flac.is_file():
+                                    torchaudio.save(tgt_path_flac, new_audio, sample_rate)
+                                else:
+                                    print(f"skipped {tgt_path_flac} because it already exists")
+                                seconds += source[2]
+                            else:
+                                skips += 1
+                    new_int_hours = int(seconds / 3600)
+                    if new_int_hours != prev_int_hours:
+                        prev_int_hours = new_int_hours
+                        print(f"added {round(seconds / 3600, 2)} hours of audio")
+                    previous_source = current_source
+            print(f"added {round(seconds / 3600, 2)} hours of audio")
+            print(f"skipped {skips} files, that's {round(skips / i * 100, 2)}%")
         super().__init__(**kwargs)
 
-    def collect_data(self, file):
-        pass
+    def collect_data(self, directory):
+        num_data = 0
+        for file in Path(directory).glob("**/*.flac"):
+            if file.name.startswith("."):
+                continue
+            num_data += 1
+            yield {
+                "path": file,
+                "speaker": file.parent.name,
+                "transcript": open(file.with_suffix(".lab"), "r").read(),
+            }
+        print(f"found {num_data} data points")

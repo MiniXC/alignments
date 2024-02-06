@@ -11,8 +11,10 @@ INSTALL_REQUIRES = [
     'tqdm>=4.64.0',
     'textgrid>=1.5',
     'tgt>=1.5',
+    'transformers>=4.5.1',
     "librosa>=0.9.2",
     "soundfile>=0.12.1",
+    "torchaudio>=0.9.0",
 ]
 
 setup_kwargs = {

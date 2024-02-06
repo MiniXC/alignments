@@ -73,7 +73,7 @@ def check_install_mfa(verbose, force):
             f"conda create -y -n alignments_mfa python={platform.python_version()}", 'creating "alignments_mfa" conda environment', not verbose
         )
         out = run_subprocess(
-            "conda install montreal-forced-aligner=2.0.4 -c conda-forge -n alignments_mfa -y",
+            "conda install montreal-forced-aligner -c conda-forge -n alignments_mfa -y",
             "installing montreal-forced-aligner",
             not verbose,
         )
@@ -175,18 +175,25 @@ class AlignmentDataset(Dataset):
         # LOAD
         if force == "processing" or force == "all":
             shutil.rmtree(target_directory)
+        
         if not Path(target_directory).exists() or (textgrid_url is not None and len(list(Path(target_directory).glob("**/*.wav"))) == 0):
             Path(target_directory).mkdir(exist_ok=True, parents=True)
             for item in self.collect_data(self.source_directory):
-                if not item["path"].suffix == ".wav":
-                    raise ValueError("Only .wav files are supported.")
+                if not item["path"].suffix in [".wav", ".flac"]:
+                    raise ValueError("Only .wav and .flac files are supported.")
                 target_path = (Path(target_directory) / item["speaker"] / item["path"].name)
                 target_path.parent.mkdir(exist_ok=True, parents=True)
                 if symbolic_links:
                     target_path.resolve().symlink_to(item["path"].resolve())
                 else:
                     shutil.copy(item["path"], target_path)
-                target_path.with_suffix(".lab").write_text(item["transcript"])
+                if "transcript" in item:
+                    target_path.with_suffix(".lab").write_text(item["transcript"])
+                elif "textgrid" in item:
+                    # symlink to textgrid instead of creating a lab file
+                    target_path.with_suffix(".TextGrid").resolve().symlink_to(item["textgrid"].resolve())
+                else:
+                    raise ValueError("Either transcript or textgrid must be provided.")
         else:
             print("Target directory already exists. Skipping [blue]processing[/blue].")
 
@@ -249,6 +256,7 @@ class AlignmentDataset(Dataset):
                 "validating data",
                 not verbose
             )
+            self.tmp_directory.mkdir(exist_ok=True, parents=True)
             lexicon_tmp_path = self.tmp_directory / "lexicon.txt"
             g2p_command = f". $CONDA_PREFIX/etc/profile.d/conda.sh \
                                 && conda activate alignments_mfa \
@@ -301,6 +309,12 @@ class AlignmentDataset(Dataset):
         self.files = []
         self.missing = 0
         for item in Path(self.target_directory).glob("**/*.wav"):
+            if item.with_suffix(".TextGrid").exists() and item.with_suffix(".lab").exists():
+                self.files.append([item, item.with_suffix(".TextGrid"), item.with_suffix(".lab")])
+            else:
+                self.missing += 1
+        # same for flac files
+        for item in Path(self.target_directory).glob("**/*.flac"):
             if item.with_suffix(".TextGrid").exists() and item.with_suffix(".lab").exists():
                 self.files.append([item, item.with_suffix(".TextGrid"), item.with_suffix(".lab")])
             else:
