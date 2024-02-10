@@ -1,35 +1,26 @@
 [project]
 name = "alignments"
-version = "0.1.8"
+version = "1.0.0a1"
 description = "A library for aligning audio and text"
 authors = [
     {name = "Christoph Minixhofer", email = "christoph.minixhofer@gmail.com"},
 ]
 dependencies = [
-    "click>=8.0.4",
-    "rich>=10.11.0",
-    "torch>=1.4.0",
-    "numpy>=1.19.5",
-    "tqdm>=4.64.0",
-    "textgrid>=1.5",
+    "descript-audio-codec>=1.0.0",
+    "datasets>=2.0.0",
+    "click>=8.0.0",
+    "rich>=13.0.0",
+    "montreal-forced-aligner==3.0.0a8",
+    "numpy>=1.24.0",
+    "tqdm>=4.0.0",
     "tgt>=1.5",
-    "transformers>=4.5.1",
-    "librosa>=0.9.2",
-    "soundfile>=0.12.1",
-    "torchaudio>=0.9.0",
+    "pgvector>=0.2.0",
 ]
 requires-python = ">=3.6"
 
 [project.urls]
 homepage = "https://github.com/MiniXC/alignments"
 
-[tool]
-[tool.pdm]
-
 [build-system]
 requires = ["pdm-pep517"]
 build-backend = "pdm.pep517.api"
-
-[[tool.pdm.autoexport]]
-filename = "setup.py"
-format = "setuppy"
