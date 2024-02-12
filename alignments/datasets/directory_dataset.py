@@ -36,18 +36,19 @@ class DirectoryDataset(AbstractDataset):
         """
         Returns a list of audio and text file paths
         """
-        return [pair[1:] for pair in self.data_dict.values()]
+        return [pair[1:] for pair in sorted(self.data_dict.values())]
 
     def get_audio_text_pairs_by_speaker(self) -> Dict[str, List[Tuple[Path, Path]]]:
         """
         Returns a list of audio and text file paths, grouped by speaker
         """
         speaker_dict = {}
-        for value in self.data_dict.values():
+        for value in sorted(self.data_dict.values()):
             speaker = value[0]
             if speaker not in speaker_dict:
                 speaker_dict[speaker] = []
             speaker_dict[speaker].append(value[1:])
+        return speaker_dict
 
     def _load_data_from_path(self, path: Union[Path, str]) -> None:
         """
@@ -104,13 +105,13 @@ class DirectoryDataset(AbstractDataset):
         if path.suffix in AbstractAligner.ALLOWED_AUDIO_EXTENSIONS:
             audio_path = path
             key = audio_path.stem
-            if key in self.data_dict:
+            if key in self.data_dict and self.data_dict[key][1] != audio_path:
                 raise DuplicateAudioException([path, self.data_dict[key][0]])
             return_candidate = None
             for ext in AbstractAligner.ALLOWED_TEXT_EXTENSIONS:
                 text_path = path.with_suffix(ext)
                 if text_path.exists():
-                    if return_candidate is not None:
+                    if return_candidate is not None and return_candidate != text_path:
                         raise DuplicateTextException([path, return_candidate])
                     return_candidate = text_path
             if return_candidate is None:
@@ -119,13 +120,13 @@ class DirectoryDataset(AbstractDataset):
         elif path.suffix in AbstractAligner.ALLOWED_TEXT_EXTENSIONS:
             text_path = path
             key = text_path.stem
-            if key in self.data_dict:
+            if key in self.data_dict and self.data_dict[key][2] != text_path:
                 raise DuplicateTextException([path, self.data_dict[key][1]])
             return_candidate = None
             for ext in AbstractAligner.ALLOWED_AUDIO_EXTENSIONS:
                 audio_path = path.with_suffix(ext)
                 if audio_path.exists():
-                    if return_candidate is not None:
+                    if return_candidate is not None and return_candidate != audio_path:
                         raise DuplicateAudioException([path, return_candidate])
                     return_candidate = audio_path
             if return_candidate is None:

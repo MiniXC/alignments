@@ -17,7 +17,6 @@ pip install pytest coverage coverage-badge pytest-local-badge
 ```
 I need to make sure that the tests are passing and that the coverage is at an acceptable level. I'll run the tests and coverage, then generate the badge to include in the `README.md` file.
 ```bash
-coverage run -m pytest -vs
+coverage run -m pytest -vs --local-badge-output-dir badges/
 coverage-badge -f -o badges/coverage.svg
-pytest --local-badge-output-dir badges/
 ```

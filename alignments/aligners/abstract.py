@@ -43,8 +43,8 @@ class AbstractAligner(ABC):
         ".ark",
         ".scp",
     ]
-    # for now, only .txt and .lab files are supported, but in the future, we may want to support more file types (e.g. .srt, .vtt, .TextGrid)
-    ALLOWED_TEXT_EXTENSIONS = [".txt", ".lab"]
+    # for now, only .lab files are supported, but in the future, we may want to support more file types (e.g. .srt, .vtt, .TextGrid)
+    ALLOWED_TEXT_EXTENSIONS = [".lab"]
 
     def __init__(
         self,
@@ -71,9 +71,8 @@ class AbstractAligner(ABC):
         pass
 
     @abstractmethod
-    def _align(
-        self, audio_paths: List[str], text_paths: List[str], alignment_dir: str
-    ) -> List[str]:
+    def _align(self, audio_path: Path, text_path: Path) -> Path:
+        # TODO: add object representing alignment
         """
         Aligns audio files to text files
         :param audio_paths: list of paths to audio files
