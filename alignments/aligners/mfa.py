@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 
 from kalpy.utterance import Segment, Utterance
-from kalpy.fstext.lexicon import LexiconCompiler, HierarchicalCtm
+from kalpy.fstext.lexicon import LexiconCompiler, HierarchicalCtm, Pronunciation
 from kalpy.feat.cmvn import CmvnComputer
 import montreal_forced_aligner
 from montreal_forced_aligner.models import ModelManager
@@ -13,9 +13,7 @@ from montreal_forced_aligner.corpus.classes import FileData
 from montreal_forced_aligner.online.alignment import align_utterance_online
 from rich.console import Console
 
-console = Console()
-
-from alignments.aligners.abstract import AbstractAligner
+from alignments.aligners.abstract import AbstractAligner, Alignment
 from alignments.aligners.exceptions import (
     MFAVersionException,
     MFANoKaldiException,
@@ -24,17 +22,7 @@ from alignments.aligners.exceptions import (
     MFAMultipleUttException,
 )
 
-
-class PyniniLocalGenerator(PyniniGenerator):
-
-    @property
-    def working_directory(self) -> Path:
-        """
-        create a temporary directory for the working directory
-        """
-        if self._working_directory is None:
-            self._working_directory = Path(tempfile.mkdtemp())
-        return self._working_directory
+console = Console()
 
 
 ALLOWED_AUDIO_EXTENSIONS = [
@@ -66,8 +54,8 @@ class MFAAligner(AbstractAligner):
 
         try:
             import _kalpy
-        except ImportError:
-            raise MFANoKaldiException()
+        except ImportError as e:
+            raise MFANoKaldiException() from e
 
         mfa_version = montreal_forced_aligner.utils.get_mfa_version()
         if not mfa_version.startswith("3."):
@@ -80,14 +68,16 @@ class MFAAligner(AbstractAligner):
         acoustic_model = MODEL_TYPES["acoustic"].get_pretrained_path(mfa_acoustic_model)
         if acoustic_model is None:
             manager.download_model("acoustic", mfa_acoustic_model)
-            acoustic_model = manager.get_pretrained_path("acoustic", mfa_acoustic_model)
+            acoustic_model = MODEL_TYPES["acoustic"].get_pretrained_path(
+                mfa_acoustic_model
+            )
         self.acoustic_model = AcousticModel(acoustic_model)
 
         console.rule("Checking for MFA dictionary [italic]english_mfa[/italic]...")
         dictionary = MODEL_TYPES["dictionary"].get_pretrained_path(mfa_dictionary)
         if dictionary is None:
             manager.download_model("dictionary", mfa_dictionary)
-            dictionary = manager.get_pretrained_path("dictionary", mfa_dictionary)
+            dictionary = MODEL_TYPES["dictionary"].get_pretrained_path(mfa_dictionary)
         if dictionary.suffix != ".dict":
             raise MFADictionaryFormatException(dictionary)
         self.lexicon = LexiconCompiler(
@@ -129,11 +119,11 @@ class MFAAligner(AbstractAligner):
             model_path = MODEL_TYPES["g2p"].get_pretrained_path(mfa_g2p_model)
             if model_path is None:
                 manager.download_model("g2p", mfa_g2p_model)
-                model_path = manager.get_pretrained_path("g2p", mfa_g2p_model)
+                model_path = MODEL_TYPES["g2p"].get_pretrained_path(mfa_g2p_model)
             self.g2p = PyniniGenerator(None, model_path)
             self.g2p.setup()
 
-    def _align(self, audio_path: Path, text_path: Path, output_dir: Path) -> Path:
+    def align_one(self, audio_path: Path, text_path: Path) -> Alignment:
         """
         Aligns an audio file to a text file
         """
@@ -145,6 +135,22 @@ class MFAAligner(AbstractAligner):
             raise MFAMultipleUttException(text_path)
         utt = utts[0]
         seg = Segment(audio_path, utt.begin, utt.end, utt.channel)
+        unk_words = []
+        for word in utt.text.split():
+            if not self.lexicon.word_table.member(word):
+                if hasattr(self, "g2p"):
+                    if word not in unk_words:
+                        unk_words.append(word)
+                    continue
+                raise MFAMissingPronunciationException(word)
+        if unk_words:
+            self.g2p.word_list = unk_words
+            g2p_prons = self.g2p.generate_pronunciations()
+            for word, prons in g2p_prons.items():
+                for pron in prons:
+                    self.lexicon.add_pronunciation(
+                        Pronunciation(word, pron, None, None, None, None, None)
+                    )
         utt = Utterance(seg, utt.text)
         utt.generate_mfccs(self.acoustic_model.mfcc_computer)
         cmvn = self.cmvn.compute_cmvn_from_features([utt.mfccs])
@@ -156,19 +162,13 @@ class MFAAligner(AbstractAligner):
             beam=self.beam,
         )
         file_ctm.word_intervals.extend(ctm.word_intervals)
-        output_path = output_dir / f"{file_name}.json"
+        temp_output_dir = Path(tempfile.mkdtemp())
+        output_path = temp_output_dir / f"{file_name}.json"
         output_path.parent.mkdir(parents=True, exist_ok=True)
         file_ctm.export_textgrid(
             output_path,
             file_duration=file.wav_info.duration,
             output_format="json",
         )
-        return output_path
-
-    def _train(
-        self, audio_paths: List[Path], text_paths: List[Path], output_dir: Path
-    ) -> None:
-        """
-        Trains the aligner on a set of audio files and text files
-        """
-        pass
+        alignment = Alignment.from_json(output_path, audio_path, text_path)
+        return alignment

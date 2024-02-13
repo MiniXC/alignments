@@ -1,16 +1,20 @@
-import requests
 import tempfile
 from pathlib import Path
 import os
 
 from rich.console import Console
-
-console = Console()
+from matplotlib import pyplot as plt
+from tqdm import tqdm
+import requests
 
 from alignments.aligners.mfa import MFAAligner
 from alignments.datasets.directory_dataset import DirectoryDataset
 
+console = Console()
+
 TEMP_DIR = tempfile.gettempdir()
+
+dataset, aligner, aligner_g2p, example_alignment = None, None, None, None
 
 
 def test_load_directory_dataset():
@@ -94,35 +98,63 @@ def test_align_single_mfa_aligner():
     """
     Test aligning with an MFA aligner
     """
-    align_dir = Path(TEMP_DIR) / "alignments"
-    print(dataset.get_audio_text_pairs()[0])
-    from time import time
+    global example_alignment
 
-    start = time()
-    aligned_json = aligner._align(
+    example_alignment = aligner.align_one(
         dataset.get_audio_text_pairs()[0][0],
         dataset.get_audio_text_pairs()[0][1],
-        align_dir,
     )
-    print(time() - start)
-    expected_aligned_json = Path("tests/test_alignment.json")
-    assert aligned_json.exists()
-    assert aligned_json.read_text() == expected_aligned_json.read_text()
+
+    assert example_alignment.word_segments[1].label == "mister"
+    assert example_alignment.word_segments[1].start == 0.52
+    assert example_alignment.word_segments[1].end == 0.79
+    assert example_alignment.word_segments[-1].label == "<eps>"
+    assert example_alignment.word_segments[-1].start == 5.44
+    assert example_alignment.word_segments[-1].end == 5.855
+    assert example_alignment.phone_segments[1].label == "mʲ"
+    assert example_alignment.phone_segments[1].start == 0.52
+    assert example_alignment.phone_segments[1].end == 0.59
+    assert example_alignment.phone_segments[-1].label == "sil"
+    assert example_alignment.phone_segments[-1].start == 5.44
+    assert example_alignment.phone_segments[-1].end == 5.855
 
 
-# def test_align_mfa_aligner():
-#     """
-#     Test aligning with an MFA aligner
-#     """
-#     aligner = MFAAligner()
-#     align_dir = Path(TEMP_DIR) / "alignments"
-#     aligner.align(dataset, align_dir, overwrite=True)
+def test_align_single_mfa_g2p_aligner():
+    """
+    Test aligning with an MFA aligner with a g2p model
+    """
+    alignment = aligner_g2p.align_one(
+        dataset.get_audio_text_pairs()[1][0],
+        dataset.get_audio_text_pairs()[1][1],
+    )
+
+    assert alignment.word_segments[4].label == "quilter's"
+    assert alignment.word_segments[4].start == 1.36
+    assert alignment.word_segments[4].end == 1.83
+    assert alignment.phone_segments[11].label == "cʷ"
+    assert alignment.phone_segments[11].start == 1.36
+    assert alignment.phone_segments[11].end == 1.47
 
 
-# def test_align_one_mfa_aligner():
-#     """
-#     Test aligning with an MFA aligner
-#     """
-#     aligner = MFAAligner()
-#     align_dir = Path(TEMP_DIR) / "alignments"
-#     alignment = aligner.align(dataset.get_audio_text_pairs()[0])
+def test_plot_alignment():
+    """
+    Test plotting an alignment
+    """
+
+    fig = example_alignment.plot()
+    assert fig is not None
+    plt.savefig(Path(TEMP_DIR) / "alignment.png")
+    print(f"Alignment plot saved to {TEMP_DIR}/alignment.png")
+
+
+def test_align_more():
+    """
+    Test aligning the first 10 files in the dataset
+    """
+    i = 0
+    for audio_path, text_path in tqdm(dataset.get_audio_text_pairs(), desc="Aligning"):
+        aligner_g2p.align_one(audio_path, text_path)
+        i += 1
+        if i == 10:
+            break
+    assert i == 10

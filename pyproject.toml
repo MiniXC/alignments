@@ -14,6 +14,7 @@ dependencies = [
     "numpy>=1.24.0",
     "tqdm>=4.0.0",
     "tgt>=1.5",
+    "torchaudio>=0.9.0",
     "pgvector>=0.2.0",
 ]
 requires-python = ">=3.6"

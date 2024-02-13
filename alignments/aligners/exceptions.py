@@ -52,7 +52,7 @@ class MFAMultipleUttException(Exception):
     """
 
     def __init__(self, path: Path):
-        super().__init(
+        super().__init__(
             f"Multiple utterances found in {path}, currently only one utterance per text file is supported"
         )
         self.path = path
