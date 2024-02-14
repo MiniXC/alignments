@@ -1,13 +1,14 @@
 import tempfile
 from pathlib import Path
 import os
+from time import time
 
 from rich.console import Console
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 import requests
 
-from alignments.aligners.mfa import MFAAligner
+from alignments.aligners.mfa import MFAligner
 from alignments.datasets.directory_dataset import DirectoryDataset
 
 console = Console()
@@ -76,7 +77,7 @@ def test_create_mfa_aligner():
     Test creating an MFA aligner
     """
     global aligner
-    aligner = MFAAligner()
+    aligner = MFAligner()
 
 
 def test_create_mfa_g2p_aligner():
@@ -84,7 +85,7 @@ def test_create_mfa_g2p_aligner():
     Test creating an MFA aligner with a g2p model
     """
     global aligner_g2p
-    aligner_g2p = MFAAligner(mfa_g2p_model="english_us_mfa")
+    aligner_g2p = MFAligner(mfa_g2p_model="english_us_mfa")
     aligner_g2p.g2p.word_list = ["this", "is", "a", "test"]
     assert aligner_g2p.g2p.generate_pronunciations() == {
         "this": ["θ ɪ s", "θ ɪ z"],
@@ -100,10 +101,12 @@ def test_align_single_mfa_aligner():
     """
     global example_alignment
 
+    start = time()
     example_alignment = aligner.align_one(
         dataset.get_audio_text_pairs()[0][0],
         dataset.get_audio_text_pairs()[0][1],
     )
+    console.log(f"Alignment of {example_alignment.audio_path} took {time()-start:.2f}s")
 
     assert example_alignment.word_segments[1].label == "mister"
     assert example_alignment.word_segments[1].start == 0.52

@@ -31,7 +31,7 @@ ALLOWED_AUDIO_EXTENSIONS = [
 ALLOWED_TEXT_EXTENSIONS = [".lab"]
 
 
-class MFAAligner(AbstractAligner):
+class MFAligner(AbstractAligner):
     """
     Class for aligning audio files to text files using Montreal Forced Aligner
     """

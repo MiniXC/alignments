@@ -9,10 +9,10 @@ The Montreal Forced Aligner is a powerful tool, but it can be difficult to use. 
 
 ## Example Usage
 ```python
-from alignments import Aligner
+from alignments.aligners import MFAligner
 
-aligner = Aligner('path/to/montreal-forced-aligner')
-aligner._align('path/to/audio.wav', 'path/to/transcript.txt', 'alignment_output_dir')
+aligner = MFAligner()
+alignment = aligner.align('path/to/audio.wav', 'path/to/transcript.txt')
 ```
 
 ## Installation
