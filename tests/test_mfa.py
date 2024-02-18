@@ -2,6 +2,7 @@ import tempfile
 from pathlib import Path
 import os
 from time import time
+import shutil
 
 from rich.console import Console
 from matplotlib import pyplot as plt
@@ -28,12 +29,13 @@ def test_load_directory_dataset():
     dataset_processed_dir = Path(TEMP_DIR) / "LibriSpeech/dev-clean-processed"
     console.rule("Checking for LibriSpeech dataset...")
     if not dataset_dir.exists():
-        with console.status("Downloading LibriSpeech dataset..."):
-            url = "https://www.openslr.org/resources/12/dev-clean.tar.gz"
-            r = requests.get(url)
-            with open(f"{TEMP_DIR}/dev-clean.tar.gz", "wb") as f:
-                f.write(r.content)
-            dataset_dir.mkdir()
+        if not Path(f"{TEMP_DIR}/dev-clean.tar.gz").exists():
+            with console.status("Downloading LibriSpeech dataset..."):
+                url = "https://www.openslr.org/resources/12/dev-clean.tar.gz"
+                r = requests.get(url)
+                with open(f"{TEMP_DIR}/dev-clean.tar.gz", "wb") as f:
+                    f.write(r.content)
+                dataset_dir.mkdir()
         with console.status("Extracting LibriSpeech dataset..."):
             os.system(f"tar -xvf {TEMP_DIR}/dev-clean.tar.gz -C {TEMP_DIR}")
     console.rule("Checking for processed LibriSpeech dataset...")
@@ -161,3 +163,78 @@ def test_align_more():
         if i == 10:
             break
     assert i == 10
+
+
+def test_mfa_cli_speed():
+    dataset_subset = dataset.get_subset(500)
+    # create a temp directory for the dataset subset
+    dataset_subset_dir = Path(TEMP_DIR) / "dataset_subset"
+    if dataset_subset_dir.exists():
+        shutil.rmtree(dataset_subset_dir)
+    dataset_subset_dir.mkdir(exist_ok=True)
+    # copy the audio and text files to the temp directory
+    for audio_path, text_path in dataset_subset.get_audio_text_pairs():
+        shutil.copy(audio_path, dataset_subset_dir)
+        shutil.copy(text_path, dataset_subset_dir)
+    start = time()
+    os.system(
+        f"mfa align {dataset_subset_dir} english_mfa english_mfa {TEMP_DIR}/mfa_aligned -j {os.cpu_count()} --g2p_model english_us_mfa --use_mp --single_speaker"
+    )
+    time_taken = time() - start
+    console.log(
+        f"MFA CLI alignment of {len(dataset_subset)} files took {time_taken:.2f}s ({len(dataset_subset)/time_taken:.2f} files/s)"
+    )
+    assert (Path(TEMP_DIR) / "mfa_aligned").exists()
+
+
+def test_align_dataset():
+    """
+    Test aligning the entire dataset
+    """
+    dataset_subset = dataset.get_subset(10)
+    alignment_test = Path(TEMP_DIR) / "alignments"
+    alignment_test.mkdir(exist_ok=True)
+    start = time()
+    paths = aligner_g2p.align_dataset(
+        dataset_subset,
+        output_dir=alignment_test,
+        overwrite=True,
+        show_progress=True,
+    )
+    time_taken = time() - start
+    console.log(
+        f"Alignment of {len(paths)} files took {time_taken:.2f}s ({len(paths)/time_taken:.2f} files/s)"
+    )
+    assert len(paths) == 10
+
+
+def test_align_dataset_mp():
+    """
+    Test aligning the entire dataset with multiprocessing
+    """
+
+    dataset_subset = dataset.get_subset(500)
+    alignment_test = Path(TEMP_DIR) / "alignments_mp"
+    alignment_test.mkdir(exist_ok=True)
+    start = time()
+    paths = aligner_g2p.align_dataset(
+        dataset_subset,
+        output_dir=alignment_test,
+        overwrite=True,
+        show_progress=True,
+        use_mp=True,
+    )
+    time_taken = time() - start
+    console.log(
+        f"Alignment of {len(paths)} files took {time_taken:.2f}s ({len(paths)/time_taken:.2f} files/s)"
+    )
+    assert len(paths) == 500
+
+
+def test_export_words():
+    """
+    Test exporting word audio
+    """
+    example_alignment.export_word_audio(Path(TEMP_DIR) / "word_audio")
+    print(f"Word audio exported to {TEMP_DIR}/word_audio")
+    assert (Path(TEMP_DIR) / "word_audio").exists()

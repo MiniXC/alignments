@@ -6,8 +6,12 @@ from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Any, List
 import json
+import shutil
+import os
+from multiprocessing import Pool
 
 from rich.console import Console
+from rich.progress import track, Progress
 from matplotlib import pyplot as plt
 import matplotlib as mpl
 import torchaudio
@@ -176,6 +180,47 @@ class Alignment:
         phone_segments = [Interval(start, end, label) for start, end, label in phones]
         return cls(audio_path, text_path, word_segments, phone_segments)
 
+    def to_json(self, json_path: Path) -> None:
+        """
+        Saves the alignment to a JSON file
+        :param json_path: path to save the JSON file
+        """
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "audio_path": str(self.audio_path.resolve()),
+                    "text_path": str(self.text_path.resolve()),
+                    "word_segments": [
+                        [segment.start, segment.end, segment.label]
+                        for segment in self.word_segments
+                    ],
+                    "phone_segments": [
+                        [segment.start, segment.end, segment.label]
+                        for segment in self.phone_segments
+                    ],
+                },
+                f,
+                ensure_ascii=False,
+                indent=4,
+            )
+
+    def export_word_audio(self, output_dir: Path) -> None:
+        """
+        Exports the audio of the word segments
+        :param output_path: path to save the output audio
+        """
+        waveform, sample_rate = torchaudio.load(self.audio_path)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        for i, segment in enumerate(self.word_segments):
+            start = int(segment.start * sample_rate)
+            end = int(segment.end * sample_rate)
+            output_path = output_dir / f"{i:03d}_{segment.label}.wav"
+            torchaudio.save(
+                output_path,
+                waveform[:, start:end],
+                sample_rate,
+            )
+
 
 class AbstractAligner(ABC):
     """
@@ -234,34 +279,68 @@ class AbstractAligner(ABC):
         """
         pass
 
+    def _unpacked_align_one(self, args: List) -> Alignment:
+        return self.align_one(*args)
+
     def align_dataset(
         self,
         dataset: AbstractDataset,
-        alignment_dir: str,
+        output_dir: str,
         overwrite: bool = False,
-    ) -> None:
+        show_progress: bool = True,
+        use_mp: bool = False,
+        mp_workers: int = os.cpu_count(),
+        mp_chunksize: int = 25,
+    ) -> List[Path]:
         """
         Aligns audio files to text files
         :param audio_paths: list of paths to audio files
         :param text_paths: list of paths to text files
-        :param alignment_dir: directory to save the alignment files
+        :param output_dir: directory to save the alignment files
         :param overwrite: whether to overwrite existing alignment files
+        :return: list of paths to output files
         """
-        for audio_path, text_path in dataset.get_audio_text_pairs():
-            alignment_path = Path(alignment_dir) / f"{audio_path.stem}.lab"
-            if alignment_path.exists() and not overwrite:
-                console.print(
-                    f"Alignment file {alignment_path} already exists. Skipping...",
-                    style="warning",
-                )
-                continue
-            alignment = self.align_one(audio_path, text_path)
-            with open(alignment_path, "w", "utf-8") as f:
-                for segment in alignment.phone_segments:
-                    f.write(
-                        f"{segment.start:.2f}\t{segment.end:.2f}\t{segment.label}\n"
-                    )
-            console.print(
-                f"Alignment file {alignment_path} saved successfully.",
-                style="info",
-            )
+        if overwrite and output_dir.exists():
+            console.log(f"Overwriting alignment files in {output_dir}")
+            shutil.rmtree(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        alignment_paths = []
+        ds = dataset.get_audio_text_pairs()
+        if use_mp:
+            with Pool(mp_workers) as p:
+                if show_progress:
+                    with Progress() as progress:
+
+                        task = progress.add_task("Aligning", total=len(dataset))
+                        for alignment in p.imap_unordered(
+                            self._unpacked_align_one, ds, chunksize=mp_chunksize
+                        ):
+                            alignment_path = output_dir / (
+                                alignment.audio_path.stem + ".json"
+                            )
+                            alignment.to_json(alignment_path)
+                            alignment_paths.append(alignment_path)
+                            progress.update(task, advance=1)
+                else:
+                    for alignment in p.imap_unordered(
+                        self._unpacked_align_one, ds, chunksize=mp_chunksize
+                    ):
+                        alignment_path = output_dir / (
+                            alignment.audio_path.stem + ".json"
+                        )
+                        alignment.to_json(alignment_path)
+                        alignment_paths.append(alignment_path)
+
+        else:
+            if show_progress:
+                ds = track(ds, description="Aligning dataset")
+            for audio_path, text_path in ds:
+                alignment_path = output_dir / (audio_path.stem + ".json")
+                if alignment_path.exists() and not overwrite:
+                    console.log(f"Alignment file {alignment_path} already exists")
+                    continue
+                alignment = self.align_one(audio_path, text_path)
+                alignment.to_json(alignment_path)
+                alignment_paths.append(alignment_path)
+
+        return alignment_paths
