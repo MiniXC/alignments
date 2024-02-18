@@ -1,10 +1,9 @@
-from typing import List, Dict, Tuple, Union
+from typing import List, Dict, Tuple, Union, Optional
 from pathlib import Path
 from tqdm import tqdm
+import random
 
 from rich.console import Console
-
-console = Console()
 
 from alignments.aligners.abstract import AbstractAligner
 from alignments.datasets.exceptions import (
@@ -16,8 +15,9 @@ from alignments.datasets.exceptions import (
     EmptyDatasetException,
 )
 
-
 from alignments.datasets.abstract import AbstractDataset
+
+console = Console()
 
 
 class DirectoryDataset(AbstractDataset):
@@ -25,15 +25,20 @@ class DirectoryDataset(AbstractDataset):
     Class for representing a dataset of audio paired with text, where the audio and text files are in a directory.
     """
 
-    def __init__(self, directory: Union[Path, str]) -> None:
+    def __init__(self, directory: Optional[Union[Path, str]] = None) -> None:
         """
         Initializes the dataset
         """
         super().__init__()
         self.data_dict = {}
+<<<<<<< HEAD
         if isinstance(directory, str):
             directory = Path(directory)
         self._load_data_from_path(directory)
+=======
+        if directory:
+            self._load_data_from_path(directory)
+>>>>>>> 39b68c85304101159948e3036adf24eca5bbab8f
 
     def get_audio_text_pairs(self) -> List[Tuple[Path, Path]]:
         """
@@ -135,3 +140,19 @@ class DirectoryDataset(AbstractDataset):
             if return_candidate is None:
                 raise NoAudioException(path)
             self.data_dict[key] = (speaker, return_candidate, text_path)
+
+    def get_subset(self, length: int, seed: int = 42) -> "DirectoryDataset":
+        """
+        Returns a random subset of the dataset
+        """
+        random.seed(seed)
+        subset = random.sample(list(self.data_dict.values()), length)
+        new_dataset = DirectoryDataset()
+        new_dataset.data_dict = {str(i): pair for i, pair in enumerate(subset)}
+        return new_dataset
+
+    def __len__(self) -> int:
+        """
+        Returns the length of the dataset
+        """
+        return len(self.data_dict)

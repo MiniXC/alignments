@@ -56,3 +56,13 @@ class MFAMultipleUttException(Exception):
             f"Multiple utterances found in {path}, currently only one utterance per text file is supported"
         )
         self.path = path
+
+
+class MFAAlignmentException(Exception):
+    """
+    Exception raised when an error occurs during alignment
+    """
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message

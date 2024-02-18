@@ -35,3 +35,17 @@ class AbstractDataset(ABC):
         Returns a list of audio and text file paths (or numpy arrays and strings), grouped by speaker
         """
         pass
+
+    @abstractmethod
+    def get_subset(self, length: int, seed: int = 42) -> "AbstractDataset":
+        """
+        Returns a random subset of the dataset
+        """
+        pass
+
+    @abstractmethod
+    def __len__(self) -> int:
+        """
+        Returns the length of the dataset
+        """
+        pass
