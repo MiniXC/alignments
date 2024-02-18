@@ -1,5 +1,6 @@
 from typing import List, Dict, Tuple, Union
 from pathlib import Path
+from tqdm import tqdm
 
 from rich.console import Console
 
@@ -30,6 +31,8 @@ class DirectoryDataset(AbstractDataset):
         """
         super().__init__()
         self.data_dict = {}
+        if isinstance(directory, str):
+            directory = Path(directory)
         self._load_data_from_path(directory)
 
     def get_audio_text_pairs(self) -> List[Tuple[Path, Path]]:
@@ -73,11 +76,11 @@ class DirectoryDataset(AbstractDataset):
         """
         single_speaker = None
         warn_structure = False
-        for speaker in (path).iterdir():
+        dirs = list((path).iterdir())
+        for speaker in tqdm(dirs, desc="loading subdirectories"):
             if speaker.is_dir():
                 if single_speaker:
                     raise DatasetStructureException(single_speaker, path)
-                console.log(f"Loading data from {speaker}")
                 for file in speaker.rglob("*"):
                     if file.is_file():
                         self._add_audio_and_text_paths(file, speaker.name)
