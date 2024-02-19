@@ -1,6 +1,6 @@
 from typing import List, Dict, Tuple, Union, Optional
 from pathlib import Path
-from tqdm import tqdm
+from tqdm.contrib.concurrent import process_map
 import random
 
 from rich.console import Console
@@ -19,6 +19,8 @@ from alignments.datasets.abstract import AbstractDataset
 
 console = Console()
 
+def flatten(xss):
+    return [x for xs in xss for x in xs]
 
 class DirectoryDataset(AbstractDataset):
     """
@@ -31,14 +33,10 @@ class DirectoryDataset(AbstractDataset):
         """
         super().__init__()
         self.data_dict = {}
-<<<<<<< HEAD
         if isinstance(directory, str):
             directory = Path(directory)
-        self._load_data_from_path(directory)
-=======
         if directory:
             self._load_data_from_path(directory)
->>>>>>> 39b68c85304101159948e3036adf24eca5bbab8f
 
     def get_audio_text_pairs(self) -> List[Tuple[Path, Path]]:
         """
@@ -57,6 +55,17 @@ class DirectoryDataset(AbstractDataset):
                 speaker_dict[speaker] = []
             speaker_dict[speaker].append(value[1:])
         return speaker_dict
+
+    def _process_dir(self, speaker):
+        if speaker.is_dir():
+            paths = []
+            for file in speaker.rglob("*"):
+                if file.is_file():
+                    paths.append(self._add_audio_and_text_paths(file, speaker.name))
+            return paths
+        else:
+            console.log(f"Loading data from single speaker")
+            return self._add_audio_and_text_paths(speaker, "1")
 
     def _load_data_from_path(self, path: Union[Path, str]) -> None:
         """
@@ -82,22 +91,11 @@ class DirectoryDataset(AbstractDataset):
         single_speaker = None
         warn_structure = False
         dirs = list((path).iterdir())
-        for speaker in tqdm(dirs, desc="loading subdirectories"):
-            if speaker.is_dir():
-                if single_speaker:
-                    raise DatasetStructureException(single_speaker, path)
-                for file in speaker.rglob("*"):
-                    if file.is_file():
-                        self._add_audio_and_text_paths(file, speaker.name)
-                    elif file.is_dir():
-                        warn_structure = True
-                single_speaker = False
-            else:
-                if single_speaker is False:
-                    raise DatasetStructureException(single_speaker, path)
-                console.log(f"Loading data from single speaker")
-                self._add_audio_and_text_paths(speaker, "1")
-                single_speaker = True
+        results = process_map(self._process_dir, dirs, chunksize=10)
+        if isinstance(results[0], list):
+            results = flatten(results)
+        for r in results:
+            self.data_dict[r[0]] = r[1:]
         if not self.data_dict:
             raise EmptyDatasetException(path)
         if warn_structure:
@@ -113,8 +111,6 @@ class DirectoryDataset(AbstractDataset):
         if path.suffix in AbstractAligner.ALLOWED_AUDIO_EXTENSIONS:
             audio_path = path
             key = audio_path.stem
-            if key in self.data_dict and self.data_dict[key][1] != audio_path:
-                raise DuplicateAudioException([path, self.data_dict[key][0]])
             return_candidate = None
             for ext in AbstractAligner.ALLOWED_TEXT_EXTENSIONS:
                 text_path = path.with_suffix(ext)
@@ -124,12 +120,10 @@ class DirectoryDataset(AbstractDataset):
                     return_candidate = text_path
             if return_candidate is None:
                 raise NoTextException(f"No text file found for {path}")
-            self.data_dict[key] = (speaker, audio_path, return_candidate)
+            return (key, speaker, audio_path, return_candidate)
         elif path.suffix in AbstractAligner.ALLOWED_TEXT_EXTENSIONS:
             text_path = path
             key = text_path.stem
-            if key in self.data_dict and self.data_dict[key][2] != text_path:
-                raise DuplicateTextException([path, self.data_dict[key][1]])
             return_candidate = None
             for ext in AbstractAligner.ALLOWED_AUDIO_EXTENSIONS:
                 audio_path = path.with_suffix(ext)
@@ -139,7 +133,7 @@ class DirectoryDataset(AbstractDataset):
                     return_candidate = audio_path
             if return_candidate is None:
                 raise NoAudioException(path)
-            self.data_dict[key] = (speaker, return_candidate, text_path)
+            return (key, speaker, return_candidate, text_path)
 
     def get_subset(self, length: int, seed: int = 42) -> "DirectoryDataset":
         """

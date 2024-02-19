@@ -232,6 +232,7 @@ class MFAligner(AbstractAligner):
         if len(utts) > 1:
             raise MFAMultipleUttException(text_path)
         utt = utts[0]
+        utt.text = utt.text.lower()
         seg = Segment(audio_path, utt.begin, utt.end, utt.channel)
         unk_words = []
         for word in utt.text.split():

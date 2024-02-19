@@ -4,14 +4,14 @@ abstract classes for aligners
 
 from pathlib import Path
 from abc import ABC, abstractmethod
-from typing import Any, List
+from typing import Any, List, Union
 import json
 import shutil
 import os
-from multiprocessing import Pool
+from tqdm.contrib.concurrent import process_map
 
 from rich.console import Console
-from rich.progress import track, Progress
+from rich.progress import track
 from matplotlib import pyplot as plt
 import matplotlib as mpl
 import torchaudio
@@ -279,58 +279,53 @@ class AbstractAligner(ABC):
         """
         pass
 
-    def _unpacked_align_one(self, args: List) -> Alignment:
-        return self.align_one(*args)
+    def _unpacked_try_align_one(self, args: List) -> Alignment:
+        try:
+            alignment = self.align_one(*args)
+            alignment_path = self.output_dir / (
+                alignment.audio_path.stem + ".json"
+            )
+            alignment.to_json(alignment_path)
+        except Exception as e:
+            print(f"the following error occured for alignment {Path(args[0]).stem}, skipping")
+            print(e)
 
     def align_dataset(
         self,
         dataset: AbstractDataset,
-        output_dir: str,
+        output_dir: Union[str, Path],
         overwrite: bool = False,
         show_progress: bool = True,
         use_mp: bool = False,
         mp_workers: int = os.cpu_count(),
         mp_chunksize: int = 25,
-    ) -> List[Path]:
+    ) -> None:
         """
         Aligns audio files to text files
         :param audio_paths: list of paths to audio files
         :param text_paths: list of paths to text files
         :param output_dir: directory to save the alignment files
         :param overwrite: whether to overwrite existing alignment files
-        :return: list of paths to output files
         """
+        if isinstance(output_dir, str):
+            output_dir = Path(output_dir)
         if overwrite and output_dir.exists():
             console.log(f"Overwriting alignment files in {output_dir}")
             shutil.rmtree(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
-        alignment_paths = []
         ds = dataset.get_audio_text_pairs()
+        new_ds = []
+        skipped = 0
+        self.output_dir = output_dir
+        for item in ds:
+            if (output_dir / (item[0].stem + ".json")).exists():
+                skipped += 1
+            else:
+                new_ds.append(item)
+        del ds
+        print(f"Skipped {skipped} files because they already have been aligned.")
         if use_mp:
-            with Pool(mp_workers) as p:
-                if show_progress:
-                    with Progress() as progress:
-
-                        task = progress.add_task("Aligning", total=len(dataset))
-                        for alignment in p.imap_unordered(
-                            self._unpacked_align_one, ds, chunksize=mp_chunksize
-                        ):
-                            alignment_path = output_dir / (
-                                alignment.audio_path.stem + ".json"
-                            )
-                            alignment.to_json(alignment_path)
-                            alignment_paths.append(alignment_path)
-                            progress.update(task, advance=1)
-                else:
-                    for alignment in p.imap_unordered(
-                        self._unpacked_align_one, ds, chunksize=mp_chunksize
-                    ):
-                        alignment_path = output_dir / (
-                            alignment.audio_path.stem + ".json"
-                        )
-                        alignment.to_json(alignment_path)
-                        alignment_paths.append(alignment_path)
-
+            process_map(self._unpacked_try_align_one, new_ds, chunksize=mp_chunksize, max_workers=mp_workers)
         else:
             if show_progress:
                 ds = track(ds, description="Aligning dataset")
@@ -341,6 +336,5 @@ class AbstractAligner(ABC):
                     continue
                 alignment = self.align_one(audio_path, text_path)
                 alignment.to_json(alignment_path)
-                alignment_paths.append(alignment_path)
 
         return alignment_paths

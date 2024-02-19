@@ -14,7 +14,12 @@ from alignments.datasets.directory_dataset import DirectoryDataset
 
 console = Console()
 
-TEMP_DIR = tempfile.gettempdir()
+if os.environ.get("TMPDIR", None) is None:
+    TEMP_DIR = Path(os.environ.get("TMPDIR"))
+    TEMP_DIR.mkdir(exist_ok=True)
+    TEMP_DIR = str(TEMP_DIR)
+else:
+    TEMP_DIR = tempfile.gettempdir()
 
 dataset, aligner, aligner_g2p, example_alignment = None, None, None, None
 
