@@ -14,6 +14,22 @@ from montreal_forced_aligner.models import MODEL_TYPES, AcousticModel
 from montreal_forced_aligner.corpus.classes import FileData
 from montreal_forced_aligner.online.alignment import align_utterance_online
 from montreal_forced_aligner import config as mfa_config
+from montreal_forced_aligner.data import (
+    BRACKETED_WORD,
+    CUTOFF_WORD,
+    LAUGHTER_WORD,
+    OOV_WORD,
+    Language,
+)
+from montreal_forced_aligner.dictionary.mixins import (
+    DEFAULT_BRACKETS,
+    DEFAULT_CLITIC_MARKERS,
+    DEFAULT_COMPOUND_MARKERS,
+    DEFAULT_PUNCTUATION,
+    DEFAULT_WORD_BREAK_MARKERS,
+)
+from montreal_forced_aligner.tokenization.simple import SimpleTokenizer
+from montreal_forced_aligner.tokenization.spacy import generate_language_tokenizer
 from rich.console import Console
 
 from alignments.aligners.abstract import AbstractAligner, Alignment
@@ -133,6 +149,8 @@ class MFAligner(AbstractAligner):
         self.lexicon.phone_table.write_text(phones_path)
         self.lexicon.clear()
 
+        self.oov_cache = {}
+
         # this is a dirty hack to get around the fact that the lexicon is not picklable
         self.lexicon.lock = FakeLock()
 
@@ -158,6 +176,20 @@ class MFAligner(AbstractAligner):
             "self_loop_scale": mfa_self_loop_scale,
             "boost_silence": mfa_boost_silence,
         }
+
+        self.tokenizer = SimpleTokenizer(
+            word_table=self.lexicon.word_table,
+            word_break_markers=DEFAULT_WORD_BREAK_MARKERS,
+            punctuation=DEFAULT_PUNCTUATION,
+            clitic_markers=DEFAULT_CLITIC_MARKERS,
+            compound_markers=DEFAULT_COMPOUND_MARKERS,
+            brackets=DEFAULT_BRACKETS,
+            laughter_word=LAUGHTER_WORD,
+            oov_word=OOV_WORD,
+            bracketed_word=BRACKETED_WORD,
+            cutoff_word=CUTOFF_WORD,
+            ignore_case=True,
+        )
 
         if mfa_g2p_model is not None:
             console.rule("Checking for MFA g2p model [italic]g2p[/italic]...")
@@ -234,7 +266,8 @@ class MFAligner(AbstractAligner):
         utt = utts[0]
         seg = Segment(audio_path, utt.begin, utt.end, utt.channel)
         unk_words = []
-        for word in utt.text.split():
+        text, _, oovs = self.tokenizer(utt.text)
+        for word in oovs:
             if not self.lexicon.word_table.member(word):
                 if hasattr(self, "g2p"):
                     if word not in unk_words:
@@ -249,7 +282,7 @@ class MFAligner(AbstractAligner):
                     self.lexicon.add_pronunciation(
                         Pronunciation(word, pron, None, None, None, None, None)
                     )
-        utt = Utterance(seg, utt.text)
+        utt = Utterance(seg, text)
         utt.generate_mfccs(self.acoustic_model.mfcc_computer)
         cmvn = self.cmvn.compute_cmvn_from_features([utt.mfccs])
         utt.apply_cmvn(cmvn)

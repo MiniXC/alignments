@@ -109,6 +109,7 @@ def test_align_single_mfa_aligner():
         dataset.get_audio_text_pairs()[0][1],
     )
     console.log(f"Alignment of {example_alignment.audio_path} took {time()-start:.2f}s")
+    print(example_alignment)
 
     assert example_alignment.word_segments[1].label == "mister"
     assert example_alignment.word_segments[1].start == 0.52
